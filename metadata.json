@@ -1,0 +1,6 @@
+{
+  "name": "Fiesta Mix — Consola de DJ Offline",
+  "description": "Aplicación de DJ de escritorio y offline para fiestas, con dos decks, mezcla real, BPM sync, transiciones automáticas, soundboard y preescucha.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

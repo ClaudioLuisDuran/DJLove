@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%">
+  <!-- DJLove Logo SVG Vector Asset -->
+  <defs>
+    <style>
+      .djlove-stroke {
+        stroke: #4EA8DE;
+        stroke-width: 9;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        fill: none;
+      }
+      .djlove-stroke-fine {
+        stroke: #4EA8DE;
+        stroke-width: 5;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        fill: none;
+      }
+      .djlove-fill {
+        fill: #4EA8DE;
+      }
+      .djlove-white {
+        fill: #FFFFFF;
+      }
+      .djlove-text {
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        font-size: 78px;
+        font-weight: 500;
+        fill: #4EA8DE;
+        letter-spacing: -1px;
+      }
+    </style>
+  </defs>
+
+  <g transform="translate(0, 10)">
+    <!-- Turntable Left Base Circle -->
+    <circle cx="175" cy="185" r="75" class="djlove-stroke" />
+
+    <!-- Turntable Left Movement / Grooves Lines -->
+    <!-- Top left outer sound wave / spin lines -->
+    <path d="M 120 120 C 138 112 165 110 185 110" class="djlove-stroke-fine" />
+    <path d="M 125 132 C 142 125 168 123 185 123" class="djlove-stroke-fine" />
+    <path d="M 135 145 C 150 140 170 138 185 138" class="djlove-stroke-fine" />
+
+    <!-- Bottom left outer spin lines -->
+    <path d="M 112 250 C 135 264 165 272 195 272" class="djlove-stroke-fine" />
+    <path d="M 108 262 C 130 276 160 284 190 284" class="djlove-stroke-fine" />
+
+    <!-- Turntable Right Base Circle -->
+    <circle cx="325" cy="185" r="75" class="djlove-stroke" />
+
+    <!-- Turntable Right Movement / Grooves Lines -->
+    <!-- Top right outer sound wave / spin lines -->
+    <path d="M 315 110 C 335 110 362 112 380 120" class="djlove-stroke-fine" />
+    <path d="M 315 123 C 332 123 358 125 375 132" class="djlove-stroke-fine" />
+    <path d="M 315 138 C 330 138 350 140 365 145" class="djlove-stroke-fine" />
+
+    <!-- Bottom right outer spin lines -->
+    <path d="M 305 272 C 335 272 365 264 388 250" class="djlove-stroke-fine" />
+    <path d="M 310 284 C 340 284 370 276 392 262" class="djlove-stroke-fine" />
+
+    <!-- Left Record Center Disc -->
+    <circle cx="175" cy="185" r="28" class="djlove-fill" />
+    <circle cx="175" cy="185" r="5" class="djlove-white" />
+
+    <!-- Right Record Center Disc -->
+    <circle cx="325" cy="185" r="28" class="djlove-fill" />
+    <circle cx="325" cy="185" r="5" class="djlove-white" />
+
+    <!-- Center Bridge Circle (Love / Link) -->
+    <!-- White background knockout so it cleanly overlaps the two decks -->
+    <circle cx="250" cy="185" r="37" class="djlove-white" />
+    <circle cx="250" cy="185" r="37" class="djlove-stroke" />
+
+    <!-- Text: DJLove -->
+    <text x="250" y="355" text-anchor="middle" class="djlove-text">DJLove</text>
+  </g>
+</svg>
