@@ -19,6 +19,8 @@ import {
   Sparkles,
   ShieldAlert,
   Settings,
+  Download,
+  Laptop,
 } from 'lucide-react';
 import { DJLoveLogo } from './DJLoveLogo';
 
@@ -35,6 +37,9 @@ interface HeaderProps {
   onToggleTheme: () => void;
   onEmergencySilence: () => void;
   isPartyModeActive: boolean;
+  onOpenInstallModal: () => void;
+  isInstalled?: boolean;
+  isInstallable?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -50,6 +55,9 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleTheme,
   onEmergencySilence,
   isPartyModeActive,
+  onOpenInstallModal,
+  isInstalled = false,
+  isInstallable = false,
 }) => {
   return (
     <header className="relative flex items-center justify-between gap-4 px-4 py-2.5 bg-neutral-900/95 backdrop-blur-md border-b border-[#4EA8DE]/25 text-white select-none shadow-[0_4px_20px_rgba(0,0,0,0.4)]">
@@ -140,8 +148,39 @@ export const Header: React.FC<HeaderProps> = ({
         </button>
       </nav>
 
-      {/* Zona 3: Controles de Master, Auriculares y Seguridad */}
-      <div className="flex items-center gap-3 shrink-0">
+      {/* Zona 3: Controles de Master, Auriculares, Instalación y Seguridad */}
+      <div className="flex items-center gap-2.5 shrink-0">
+        {/* BOTÓN DESTACADO: Instalar en PC (Offline) */}
+        <button
+          onClick={onOpenInstallModal}
+          title={
+            isInstalled
+              ? 'DJLove está instalada en tu PC (Funciona 100% Offline)'
+              : 'Instalar DJLove en el Escritorio de tu PC para usarla 100% Offline'
+          }
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-md active:scale-95 cursor-pointer ${
+            isInstalled
+              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30'
+              : 'bg-[#4EA8DE] hover:bg-[#38bdf8] text-black border border-[#4EA8DE] shadow-[#4EA8DE]/25 hover:shadow-[#4EA8DE]/40'
+          }`}
+        >
+          {isInstalled ? (
+            <>
+              <Laptop size={14} className="text-emerald-300" />
+              <span className="hidden sm:inline">Instalada en PC</span>
+              <span className="sm:hidden">Instalada</span>
+            </>
+          ) : (
+            <>
+              <Download size={14} className="stroke-[2.5]" />
+              <span>Instalar en PC</span>
+              <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-black/30 text-black uppercase">
+                Offline
+              </span>
+            </>
+          )}
+        </button>
+
         {/* Volumen Master con acento celeste */}
         <div className="hidden lg:flex items-center gap-2 bg-neutral-950/80 px-2.5 py-1.5 rounded-lg border border-[#4EA8DE]/25 shadow-sm">
           <Volume2 size={14} className="text-[#4EA8DE]" />

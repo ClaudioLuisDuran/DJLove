@@ -30,6 +30,10 @@ import { Soundboard } from './components/Soundboard';
 import { AutoDjPartyMode } from './components/AutoDjPartyMode';
 import { AudioSettings } from './components/AudioSettingsModal';
 import { ShortcutsModal } from './components/ShortcutsModal';
+import { InstallDesktopModal } from './components/InstallDesktopModal';
+import { usePWAInstall } from './hooks/usePWAInstall';
+import { useOnlineStatus } from './hooks/useOnlineStatus';
+import { WifiOff } from 'lucide-react';
 
 export default function App() {
   // 1. Estados de los Decks
@@ -159,7 +163,6 @@ export default function App() {
   const [isPartyModeActive, setIsPartyModeActive] = useState(false);
   const [safetyLock, setSafetyLock] = useState(false);
 
-  // 8. Dispositivos de Audio
   const [audioConfig, setAudioConfig] = useState<AudioDeviceConfig>({
     masterDeviceId: 'default',
     cueDeviceId: 'default',
@@ -167,6 +170,11 @@ export default function App() {
     lowLatencyMode: true,
     limiterActive: true,
   });
+
+  // 9. Instalación de Escritorio y Estado Offline (PWA)
+  const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
+  const { isInstalled, isInstallable } = usePWAInstall();
+  const isOnline = useOnlineStatus();
 
   const tapTrackerRef = useRef(new TapBpmTracker());
 
@@ -879,6 +887,9 @@ export default function App() {
         }}
         onEmergencySilence={handleEmergencySilence}
         isPartyModeActive={isPartyModeActive}
+        onOpenInstallModal={() => setIsInstallModalOpen(true)}
+        isInstalled={isInstalled}
+        isInstallable={isInstallable}
       />
 
       {/* 2. CONSOLA PRINCIPAL DE DJ (DECK A — MIXER — DECK B) */}
@@ -1047,6 +1058,20 @@ export default function App() {
           {currentTab === 'shortcuts' && <ShortcutsModal />}
         </div>
       </main>
+
+      {/* 4. MODAL DE INSTALACIÓN EN ESCRITORIO PC */}
+      <InstallDesktopModal
+        isOpen={isInstallModalOpen}
+        onClose={() => setIsInstallModalOpen(false)}
+      />
+
+      {/* 5. INDICADOR DE ESTADO OFFLINE */}
+      {!isOnline && (
+        <div className="fixed bottom-4 right-4 z-40 flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-neutral-900/95 border border-[#4EA8DE]/60 text-[#4EA8DE] text-xs font-bold shadow-2xl backdrop-blur-md animate-pulse">
+          <WifiOff size={16} />
+          <span>Modo 100% Offline Activado — La consola DJLove funciona sin Internet</span>
+        </div>
+      )}
     </div>
   );
 }
