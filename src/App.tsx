@@ -149,6 +149,7 @@ export default function App() {
   // 5. Biblioteca y Playlists
   const [tracks, setTracks] = useState<TrackMetadata[]>([]);
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
+  const [activePlaylistId, setActivePlaylistId] = useState<string | null>(null);
   const [favoriteTrackIds, setFavoriteTrackIds] = useState<string[]>([]);
 
   // 6. Soundboard
@@ -191,14 +192,10 @@ export default function App() {
         globalAudio.setSplitStereoMode(savedAudio.splitStereoMode);
       }
 
-      // 2. Cargar playlists
-      const savedPlaylists = await localDB.getAllPlaylists();
-      setPlaylists(savedPlaylists);
-
-      // 3. Cargar canciones de IndexedDB
+      // 2. Cargar canciones de IndexedDB
       const savedTracks = await localDB.getAllTracks();
 
-      // 4. Generar demos de fiesta
+      // 3. Generar demos de fiesta
       const audioCtx = globalAudio.getContext();
       const demoTracksList: TrackMetadata[] = [];
 
@@ -209,6 +206,20 @@ export default function App() {
 
       const combinedTracks = [...demoTracksList, ...savedTracks];
       setTracks(combinedTracks);
+
+      // 4. Cargar playlists o inicializar lista demo inicial
+      let savedPlaylists = await localDB.getAllPlaylists();
+      if (savedPlaylists.length === 0 && demoTracksList.length > 0) {
+        const demoPl: Playlist = {
+          id: 'pl_demo_fiesta',
+          name: '🎉 Fiesta DJLove Hits',
+          trackIds: demoTracksList.map((t) => t.id),
+          created: Date.now(),
+        };
+        await localDB.savePlaylist(demoPl);
+        savedPlaylists = [demoPl];
+      }
+      setPlaylists(savedPlaylists);
 
       // Precargar pista 1 en Deck A y pista 2 en Deck B para prueba instantánea
       if (demoTracksList.length >= 2) {
@@ -264,10 +275,18 @@ export default function App() {
 
       // 3. Comprobación automática de Modo Fiesta (Auto DJ)
       if (isPartyModeActive && !isTransitioning) {
-        const activeState = mixerState.crossfader <= 0 ? deckA : deckB;
+        const isDeckAActive = mixerState.crossfader <= 0;
+        const activeState = isDeckAActive ? deckA : deckB;
+        const idleDeckId = isDeckAActive ? 'deckB' : 'deckA';
+        const idleState = isDeckAActive ? deckB : deckA;
+
         if (activeState.isPlaying && activeState.duration > 0) {
           const remaining = activeState.duration - activeState.currentTime;
           if (remaining > 0 && remaining <= transitionConfig.durationSeconds + 1) {
+            // Si el deck receptor no tiene pista cargada, preparar la siguiente de la lista
+            if (!idleState.loadedTrack) {
+              queueNextTrackForIdleDeck(idleDeckId, activeState.loadedTrack?.id);
+            }
             // Iniciar transición automática
             handleStartTransition();
           }
@@ -655,6 +674,42 @@ export default function App() {
     setMixerState((p) => ({ ...p, headphoneCueMix: mix }));
   };
 
+  // Cola de pistas automática para listas de reproducción y Modo Fiesta
+  const queueNextTrackForIdleDeck = async (idleDeckId: DeckId, currentPlayingTrackId?: string) => {
+    let pool: TrackMetadata[] = [];
+    if (activePlaylistId) {
+      const pl = playlists.find((p) => p.id === activePlaylistId);
+      if (pl && pl.trackIds.length > 0) {
+        pool = pl.trackIds
+          .map((id) => tracks.find((t) => t.id === id))
+          .filter(Boolean) as TrackMetadata[];
+      }
+    }
+    if (pool.length === 0) {
+      pool = tracks;
+    }
+
+    const available = pool.filter((t) => t.id !== currentPlayingTrackId);
+    if (available.length === 0) {
+      if (pool.length > 0) {
+        await loadTrackToDeck(idleDeckId, pool[0]);
+      }
+      return;
+    }
+
+    if (activePlaylistId) {
+      const curIdx = pool.findIndex((t) => t.id === currentPlayingTrackId);
+      const nextIdx = curIdx >= 0 ? (curIdx + 1) % pool.length : 0;
+      const nextTrack = pool[nextIdx];
+      if (nextTrack) {
+        await loadTrackToDeck(idleDeckId, nextTrack);
+        return;
+      }
+    }
+
+    await loadTrackToDeck(idleDeckId, available[0]);
+  };
+
   // TRANSICIÓN AUTOMÁTICA "MEZCLAR AHORA"
   const handleStartTransition = () => {
     if (isTransitioning) return;
@@ -662,6 +717,7 @@ export default function App() {
     // Determinar deck entrante y saliente
     const isDeckAActive = mixerState.crossfader <= 0;
     const incomingDeckId: DeckId = isDeckAActive ? 'deckB' : 'deckA';
+    const outgoingDeckId: DeckId = isDeckAActive ? 'deckA' : 'deckB';
     const incomingDeck = incomingDeckId === 'deckA' ? deckA : deckB;
 
     // Asegurar que el deck entrante empiece a sonar si está cargado
@@ -678,6 +734,12 @@ export default function App() {
       },
       () => {
         setIsTransitioning(false);
+        handleStop(outgoingDeckId);
+
+        // Si el Modo Fiesta o una playlist está activa, preparar la siguiente pista en el deck saliente
+        if (isPartyModeActive || activePlaylistId) {
+          queueNextTrackForIdleDeck(outgoingDeckId, incomingDeck.loadedTrack?.id);
+        }
       }
     );
   };
@@ -745,12 +807,12 @@ export default function App() {
     }
   };
 
-  // Playlists
-  const handleCreatePlaylist = (name: string) => {
+  // Playlists (Listas de Reproducción)
+  const handleCreatePlaylist = (name: string, trackIds: string[] = []) => {
     const newPl: Playlist = {
-      id: `pl_${Date.now()}`,
+      id: `pl_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       name,
-      trackIds: [],
+      trackIds,
       created: Date.now(),
     };
     setPlaylists((p) => [...p, newPl]);
@@ -759,7 +821,69 @@ export default function App() {
 
   const handleDeletePlaylist = (id: string) => {
     setPlaylists((p) => p.filter((pl) => pl.id !== id));
+    if (activePlaylistId === id) setActivePlaylistId(null);
     localDB.deletePlaylist(id);
+  };
+
+  const handleRenamePlaylist = (id: string, newName: string) => {
+    setPlaylists((prev) =>
+      prev.map((pl) => {
+        if (pl.id === id) {
+          const updated = { ...pl, name: newName };
+          localDB.savePlaylist(updated);
+          return updated;
+        }
+        return pl;
+      })
+    );
+  };
+
+  const handleUpdatePlaylistTracks = (id: string, trackIds: string[]) => {
+    setPlaylists((prev) =>
+      prev.map((pl) => {
+        if (pl.id === id) {
+          const updated = { ...pl, trackIds };
+          localDB.savePlaylist(updated);
+          return updated;
+        }
+        return pl;
+      })
+    );
+  };
+
+  const handlePlayPlaylist = async (playlistId: string, autoDj: boolean = false, shuffle: boolean = false) => {
+    const pl = playlists.find((p) => p.id === playlistId);
+    if (!pl || pl.trackIds.length === 0) return;
+
+    let orderedTrackIds = [...pl.trackIds];
+    if (shuffle) {
+      orderedTrackIds = orderedTrackIds.sort(() => Math.random() - 0.5);
+    }
+
+    const plTracks = orderedTrackIds
+      .map((id) => tracks.find((t) => t.id === id))
+      .filter(Boolean) as TrackMetadata[];
+
+    if (plTracks.length === 0) return;
+
+    setActivePlaylistId(playlistId);
+
+    // Cargar pista 1 en Deck A y reproducir
+    const track1 = plTracks[0];
+    await loadTrackToDeck('deckA', track1);
+    handleSetCrossfader(-1.0);
+    handlePlay('deckA');
+
+    // Cargar pista 2 en Deck B (si existe) para que esté lista
+    if (plTracks.length > 1) {
+      const track2 = plTracks[1];
+      await loadTrackToDeck('deckB', track2);
+    }
+
+    if (autoDj) {
+      setIsPartyModeActive(true);
+      setCurrentTab('autodj');
+    }
   };
 
   const handleToggleFavorite = (trackId: string) => {
@@ -1005,8 +1129,12 @@ export default function App() {
               onDeleteTrack={handleDeleteTrack}
               onCreatePlaylist={handleCreatePlaylist}
               onDeletePlaylist={handleDeletePlaylist}
+              onRenamePlaylist={handleRenamePlaylist}
+              onUpdatePlaylistTracks={handleUpdatePlaylistTracks}
+              onPlayPlaylist={handlePlayPlaylist}
               onToggleFavorite={handleToggleFavorite}
               favoriteTrackIds={favoriteTrackIds}
+              activePlaylistId={activePlaylistId}
             />
           )}
 
@@ -1032,8 +1160,19 @@ export default function App() {
               safetyLock={safetyLock}
               onToggleSafetyLock={() => setSafetyLock(!safetyLock)}
               activeDeck={mixerState.crossfader <= 0 ? deckA : deckB}
-              upcomingTracks={tracks.filter((t) => t.id !== deckA.loadedTrack?.id && t.id !== deckB.loadedTrack?.id)}
+              upcomingTracks={
+                activePlaylistId
+                  ? (playlists
+                      .find((p) => p.id === activePlaylistId)
+                      ?.trackIds.map((id) => tracks.find((t) => t.id === id))
+                      .filter(Boolean) as TrackMetadata[])
+                      .filter((t) => t.id !== deckA.loadedTrack?.id && t.id !== deckB.loadedTrack?.id)
+                  : tracks.filter((t) => t.id !== deckA.loadedTrack?.id && t.id !== deckB.loadedTrack?.id)
+              }
               onLoadTrackToDeck={loadTrackToDeck}
+              playlists={playlists}
+              activePlaylistId={activePlaylistId}
+              onSelectPlaylist={(plId) => setActivePlaylistId(plId)}
             />
           )}
 
